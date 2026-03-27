@@ -1,11 +1,10 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useStore } from './store';
 
-export default function Player() {
+export default function Player({ audioRef }) {
   const { config, playlist, currentIndex, isPlaying, togglePlay, next, previous } = useStore();
   
   // Local state for the progress bar and timers
-  const audioRef = useRef(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
@@ -143,6 +142,7 @@ export default function Player() {
       <audio 
         ref={audioRef}
         src={currentSong?.url}
+        crossOrigin="anonymous" /* 3. CRITICAL for the Web Audio API to work! */
         onTimeUpdate={(e) => setCurrentTime(e.target.currentTime)}
         onLoadedMetadata={(e) => setDuration(e.target.duration)}
         onEnded={next} // Automatically skip to next track

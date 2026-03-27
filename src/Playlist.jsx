@@ -1,7 +1,9 @@
 import React from 'react';
 import { useStore } from './store';
+import AudioSpectrumEQ from './AudioSpectrumEQ'; // 1. Import the visualizer
 
-export default function Playlist() {
+// 2. Accept audioRef as a prop from the parent that holds the Player
+export default function Playlist({ audioRef }) {
   const { playlist, currentIndex, removeSong, playSpecificSong, clearPlaylist, config, updateConfig } = useStore();
   
   const hidePlayed = config.hidePlayed || false;
@@ -63,34 +65,51 @@ export default function Playlist() {
                 <div 
                   key={song.id + index} 
                   onClick={() => playSpecificSong(index)}
-                  className={`cursor-pointer flex items-center justify-between p-3 sm:p-4 border-b border-slate-100 dark:border-slate-800/50 transition-colors group w-full ${
+                  // 3. CRITICAL: Added `relative overflow-hidden` here so the EQ stays inside the bounds
+                  className={`relative overflow-hidden cursor-pointer flex items-center justify-between p-3 sm:p-4 border-b border-slate-100 dark:border-slate-800/50 transition-colors group w-full ${
                     isPlaying 
                       ? 'bg-indigo-50 dark:bg-indigo-500/10 border-l-4 border-l-indigo-500' 
                       : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 border-l-4 border-l-transparent'
                   }`}
                 >
-                  <span className={`text-sm sm:text-base font-medium truncate flex-grow min-w-0 pr-4 transition-colors ${
-                    isPlaying 
-                      ? 'text-indigo-600 dark:text-indigo-300' 
-                      : 'text-slate-700 dark:text-slate-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'
-                  }`}>
-                    {song.title}
-                  </span>
                   
-                  <div className="flex items-center shrink-0">
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeSong(song.id);
-                      }} 
-                      className="text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 p-2 transition-colors active:scale-90"
-                      title="Remove from playlist"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                  {/* 4. THE EQ BACKGROUND: Renders only if this song is playing */}
+                  {isPlaying && (
+                    <div className="absolute inset-0 z-0 pointer-events-none opacity-15 dark:opacity-20">
+                      <AudioSpectrumEQ 
+                        audioRef={audioRef} 
+                        color="#6366f1" // Tailwind indigo-500 to match your theme
+                        barCount={40}   // Higher bar count looks better as a wide background
+                      />
+                    </div>
+                  )}
+
+                  {/* 5. FOREGROUND WRAPPER: Added `relative z-10` so the text floats above the EQ */}
+                  <div className="relative z-10 flex items-center justify-between w-full">
+                    <span className={`text-sm sm:text-base font-medium truncate flex-grow min-w-0 pr-4 transition-colors ${
+                      isPlaying 
+                        ? 'text-indigo-600 dark:text-indigo-300' 
+                        : 'text-slate-700 dark:text-slate-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'
+                    }`}>
+                      {song.title}
+                    </span>
+                    
+                    <div className="flex items-center shrink-0">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeSong(song.id);
+                        }} 
+                        className="text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 p-2 transition-colors active:scale-90"
+                        title="Remove from playlist"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
+
                 </div>
               );
             })}

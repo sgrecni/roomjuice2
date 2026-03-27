@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useStore } from './store';
 import Player from './Player';
 import SongPicker from './SongPicker';
@@ -7,6 +7,7 @@ import Settings from './Settings';
 
 export default function App() {
   const { config, updateConfig } = useStore();
+  const audioRef = useRef(null);
   
   // Settings Modal State
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -95,8 +96,8 @@ export default function App() {
           
           {/* LEFT COLUMN */}
           <div className="w-full lg:w-[var(--left-col-width)] shrink-0 flex flex-col gap-6">
-            <Player />
-            <Playlist />
+            <Player audioRef={audioRef} />
+            <Playlist audioRef={audioRef} />
           </div>
 
           {/* DRAGGABLE DIVIDER */}
