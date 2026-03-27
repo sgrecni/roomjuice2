@@ -1,9 +1,43 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+const defaultConfig = { 
+  leftWidth: 400, 
+  volume: 0.8, 
+  theme: 'dark',
+  lastPath: '',
+  hidePlayed: false
+};
+
+const loadConfig = () => {
+  const saved = localStorage.getItem('roomjuice-config');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      // Merges the parsed save OVER the defaults. 
+      // If 'volume' is missing in the save, it keeps the default 0.8.
+      return { ...defaultConfig, ...parsed };
+    } catch (e) {
+      console.error("Failed to parse config", e);
+      return defaultConfig;
+    }
+  }
+  return defaultConfig;
+};
+
 export const useStore = create(
   persist(
     (set, get) => ({
+      // The new configuration object
+      config: loadConfig(),
+
+      // Action to update config and automatically persist it
+      updateConfig: (newSettings) => set((state) => {
+        const updatedConfig = { ...state.config, ...newSettings };
+        localStorage.setItem('roomjuice-config', JSON.stringify(updatedConfig));
+        return { config: updatedConfig };
+      }),
+
       playlist: [],
       currentIndex: 0,
       isPlaying: false,

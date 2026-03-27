@@ -1,5 +1,6 @@
 /* src/index.css */
 @import "tailwindcss";
+@custom-variant dark (&:is(.dark *));
 
 /* Custom Scrollbar for the Song List */
 .custom-scrollbar::-webkit-scrollbar {

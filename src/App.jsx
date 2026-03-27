@@ -1,100 +1,125 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useStore } from './store';
 import Player from './Player';
-import { SongPicker2 } from './SongPicker';
+import SongPicker from './SongPicker';
+import Playlist from './Playlist';
+import Settings from './Settings';
 
 export default function App() {
-  const { playlist, currentIndex, removeSong, playSpecificSong, clearPlaylist } = useStore();
+  const { config, updateConfig } = useStore();
+  
+  // Settings Modal State
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Dragging State
+  const [dragWidth, setDragWidth] = useState(config.leftWidth);
+  const [isDragging, setIsDragging] = useState(false);
+
+  useEffect(() => {
+    setDragWidth(config.leftWidth);
+  }, [config.leftWidth]);
+
+  const startDragging = useCallback((e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const onDrag = useCallback((e) => {
+    if (!isDragging) return;
+    
+    const newWidth = e.clientX;
+    const minWidth = 320; 
+    const maxWidth = window.innerWidth * 0.6; 
+    
+    if (newWidth >= minWidth && newWidth <= maxWidth) {
+      setDragWidth(newWidth);
+    }
+  }, [isDragging]);
+
+  const stopDragging = useCallback(() => {
+    if (isDragging) {
+      setIsDragging(false);
+      updateConfig({ leftWidth: dragWidth });
+    }
+  }, [isDragging, dragWidth, updateConfig]);
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', onDrag);
+      window.addEventListener('mouseup', stopDragging);
+      document.body.style.cursor = 'col-resize'; 
+      document.body.style.userSelect = 'none'; 
+    } else {
+      window.removeEventListener('mousemove', onDrag);
+      window.removeEventListener('mouseup', stopDragging);
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'auto';
+    }
+    return () => {
+      window.removeEventListener('mousemove', onDrag);
+      window.removeEventListener('mouseup', stopDragging);
+    };
+  }, [isDragging, onDrag, stopDragging]);
 
   return (
-    <div style={{ 
-      maxWidth: '1000px', 
-      margin: '20px auto', 
-      fontFamily: 'sans-serif', 
-      padding: '0 20px' // Keeps it from touching the edges on mobile screens
-    }}>
-      <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>🎵 React Dynamic Audio Player</h2>
-
-      {/* Responsive Flex Container */}
-      <div style={{ 
-        display: 'flex', 
-        flexWrap: 'wrap', 
-        gap: '30px',
-        alignItems: 'flex-start' // Prevents the shorter column from stretching vertically
-      }}>
+    // The master wrapper controls the global background and text color based on the theme
+    <div 
+      className={`min-h-screen font-sans pb-32 transition-colors duration-300 ${
+        config.theme === 'dark' ? 'dark bg-slate-950 text-slate-200' : 'bg-slate-50 text-slate-900'
+      }`}
+      style={{ '--left-col-width': `${dragWidth}px` }}
+    >
+      
+      {/* Header with Gear Icon */}
+      <header className="h-14 sm:h-16 px-4 sm:px-6 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center mb-6 shadow-sm sticky top-0 z-40 transition-colors duration-300">
+        <div className="w-8"></div> {/* Invisible spacer to keep title centered */}
         
-        {/* Left Column (or Top on Mobile): Active Player & Playlist */}
-        <div style={{ flex: '1 1 400px', minWidth: '300px' }}>
-          <Player />
+        <h1 className="text-lg sm:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-600 dark:from-indigo-400 dark:to-purple-500 tracking-widest uppercase text-center">
+          RoomJuice
+        </h1>
+        
+        <button 
+          onClick={() => setIsSettingsOpen(true)}
+          className="p-1.5 sm:p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all"
+        >
+          <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        </button>
+      </header>
+
+      {/* Main Layout */}
+      <main className="w-full px-2 sm:px-4 lg:px-8">
+        <div className="flex flex-col lg:flex-row items-stretch gap-8 lg:gap-0 relative">
           
-          {/* Playlist Header with Clear Button */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <h3 style={{ margin: 0 }}>Your Playlist</h3>
-            
-            {playlist.length > 0 && (
-              <button 
-                onClick={clearPlaylist} 
-                style={{ 
-                  background: '#ff4d4f', 
-                  color: 'white', 
-                  border: 'none', 
-                  padding: '5px 10px', 
-                  borderRadius: '4px', 
-                  cursor: 'pointer' 
-                }}
-              >
-                Clear Playlist
-              </button>
-            )}
+          {/* LEFT COLUMN */}
+          <div className="w-full lg:w-[var(--left-col-width)] shrink-0 flex flex-col gap-6">
+            <Player />
+            <Playlist />
           </div>
 
-          {/* Playlist Items */}
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-            {playlist.map((song, index) => (
-              <li 
-                key={song.id} 
-                style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  padding: '10px', 
-                  borderBottom: '1px solid #ccc',
-                  backgroundColor: index === currentIndex ? '#e6f7ff' : 'transparent',
-                  borderRadius: '4px',
-                  marginBottom: '5px'
-                }}
-              >
-                <span style={{ fontSize: '14px', flexGrow: 1, paddingRight: '10px', wordBreak: 'break-word' }}>
-                  {song.title}
-                </span>
-                <div style={{ display: 'flex', gap: '5px', flexShrink: 0 }}>
-                  {/* <button onClick={() => playSpecificSong(index)} style={{ cursor: 'pointer' }}>Play</button> */}
-                  <button 
-                      onClick={() => playSpecificSong(index)}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500 text-indigo-400 hover:text-white rounded-md border border-indigo-500/20 transition-all text-xs font-bold uppercase tracking-wider group-hover:scale-105"
-                    >
-                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z" />
-                      </svg>
-                      Play
-                    </button>
-                    <button onClick={() => removeSong(song.id)} style={{ color: 'red', cursor: 'pointer' }}>×</button>
-                </div>
-              </li>
-            ))}
-            {playlist.length === 0 && (
-              <p style={{ color: '#888', padding: '20px', textAlign: 'center', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
-                Playlist is empty. Browse below to add some music!
-              </p>
-            )}
-          </ul>
-        </div>
+          {/* DRAGGABLE DIVIDER */}
+          <div 
+            onMouseDown={startDragging}
+            className="hidden lg:flex flex-col items-center justify-center w-8 cursor-col-resize shrink-0 group z-10"
+          >
+            <div className={`w-1 h-full rounded-full transition-colors ${
+              isDragging ? 'bg-indigo-500' : 'bg-slate-300 dark:bg-slate-700 group-hover:bg-indigo-400'
+            }`}></div>
+          </div>
 
-        {/* Right Column (or Bottom on Mobile): Discovery / Song Picker */}
-        <div style={{ flex: '1 1 400px', minWidth: '300px' }}>
-          <SongPicker2 />
-        </div>
+          {/* RIGHT COLUMN */}
+          <div className="w-full flex-grow min-w-0">
+            <SongPicker />
+          </div>
 
-      </div>
+        </div>
+      </main>
+
+      {/* The Settings Modal */}
+      <Settings isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+
     </div>
   );
 }
