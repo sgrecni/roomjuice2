@@ -2,162 +2,170 @@ import React, { useEffect, useState } from 'react';
 import { useStore } from './store';
 import { API_BASE_URL } from './config';
 
-export function SongPickerOld() {
-  const [data, setData] = useState({ dirs: [], files: [], currentPath: "" });
-  const [loading, setLoading] = useState(true);
-  const [path, setPath] = useState(""); 
-  const [addingFolder, setAddingFolder] = useState(null); 
-  const [isAddingAll, setIsAddingAll] = useState(false);  
+// export function SongPickerOld() {
+//   const [data, setData] = useState({ dirs: [], files: [], currentPath: "" });
+//   const [loading, setLoading] = useState(true);
+//   const [path, setPath] = useState(""); 
+//   const [addingFolder, setAddingFolder] = useState(null); 
+//   const [isAddingAll, setIsAddingAll] = useState(false);  
   
-  const addSong = useStore((state) => state.addSong);
-  const addSongs = useStore((state) => state.addSongs);
+//   const addSong = useStore((state) => state.addSong);
+//   const addSongs = useStore((state) => state.addSongs);
 
-  const fetchPath = async (path = "", recursive = false) => {
-    const url = `${API_BASE_URL}/songs.php?path=${encodeURIComponent(path)}${recursive ? '&recursive=true' : ''}`;
-    fetch(url)
-      .then((res) => res.json())
-      .then((json) => {
-        setData(json);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Fetch error:", err);
-        setLoading(false);
-      });
-  };
+//   const fetchPath = async (path = "", recursive = false) => {
+//     const url = `${API_BASE_URL}/songs.php?path=${encodeURIComponent(path)}${recursive ? '&recursive=true' : ''}`;
+//     fetch(url)
+//       .then((res) => res.json())
+//       .then((json) => {
+//         setData(json);
+//         setLoading(false);
+//       })
+//       .catch((err) => {
+//         console.error("Fetch error:", err);
+//         setLoading(false);
+//       });
+//   };
 
-  useEffect(() => {
-    setLoading(true);
-    fetchPath(path);
-  }, [path]);
+//   useEffect(() => {
+//     setLoading(true);
+//     fetchPath(path);
+//   }, [path]);
 
-  const navigateUp = () => {
-    const segments = path.split('/').filter(Boolean);
-    segments.pop();
-    setPath(segments.join('/'));
-  };
+//   const navigateUp = () => {
+//     const segments = path.split('/').filter(Boolean);
+//     segments.pop();
+//     setPath(segments.join('/'));
+//   };
 
-  const handleAddCurrentFolder = () => {
-    if (data.files.length > 0) {
-      setIsAddingAll(true);
-      setTimeout(() => {
-        addSongs(data.files);
-        setIsAddingAll(false);
-      }, 50);
-    }
-  };
+//   const handleAddCurrentFolder = () => {
+//     if (data.files.length > 0) {
+//       setIsAddingAll(true);
+//       setTimeout(() => {
+//         addSongs(data.files);
+//         setIsAddingAll(false);
+//       }, 50);
+//     }
+//   };
 
-  const handleAddSubFolder = async (folderPath, e) => {
-    e.stopPropagation(); 
-    setAddingFolder(folderPath); 
+//   const handleAddSubFolder = async (folderPath, e) => {
+//     e.stopPropagation(); 
+//     setAddingFolder(folderPath); 
     
-    try {
-      const res = await fetch(`${API_BASE_URL}/songs.php?path=${encodeURIComponent(folderPath)}&recursive=true`);
-      const json = await res.json();
+//     try {
+//       const res = await fetch(`${API_BASE_URL}/songs.php?path=${encodeURIComponent(folderPath)}&recursive=true`);
+//       const json = await res.json();
       
-      if (json.files && json.files.length > 0) {
-        addSongs(json.files);
-      } else {
-        alert("No MP3s found in this folder or any of its sub-folders.");
-      }
-    } catch (err) {
-      console.error("Failed to add folder:", err);
-      alert("Error scanning folder.");
-    } finally {
-      setAddingFolder(null); 
-    }
-  };
+//       if (json.files && json.files.length > 0) {
+//         addSongs(json.files);
+//       } else {
+//         alert("No MP3s found in this folder or any of its sub-folders.");
+//       }
+//     } catch (err) {
+//       console.error("Failed to add folder:", err);
+//       alert("Error scanning folder.");
+//     } finally {
+//       setAddingFolder(null); 
+//     }
+//   };
 
-  if (loading) return <p>Loading directory...</p>;
+//   if (loading) return <p>Loading directory...</p>;
  
-  const breadcrumbs = data.currentPath.split('/').filter(Boolean);
+//   const breadcrumbs = data.currentPath.split('/').filter(Boolean);
  
-  return (
-    <div style={{ border: '1px solid #ddd', padding: '15px', borderRadius: '8px', background: '#f9f9f9' }}>
+//   return (
+//     <div style={{ border: '1px solid #ddd', padding: '15px', borderRadius: '8px', background: '#f9f9f9' }}>
       
-      {/* Header & Navigation */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-        <h3 style={{ margin: 0 }}>Library: /{path}</h3>
-        <div style={{ display: 'flex', gap: '10px' }}>
-            {data.files.length > 0 && (
-             <button 
-                onClick={handleAddCurrentFolder} 
-                disabled={isAddingAll}
-                style={{ 
-                  background: isAddingAll ? '#ccc' : '#4CAF50', 
-                  color: 'white', 
-                  border: 'none', 
-                  padding: '5px 10px', 
-                  borderRadius: '4px', 
-                  cursor: isAddingAll ? 'wait' : 'pointer' 
-                }}
-              >
-               {isAddingAll ? '⏳ Adding...' : `➕ Add All (${data.files.length})`}
-             </button>
-            )}
-            {path !== "" && <button onClick={navigateUp}>⬆️ Up</button>}
-        </div>
-      </div>
+//       {/* Header & Navigation */}
+//       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+//         <h3 style={{ margin: 0 }}>Library: /{path}</h3>
+//         <div style={{ display: 'flex', gap: '10px' }}>
+//             {data.files.length > 0 && (
+//              <button 
+//                 onClick={handleAddCurrentFolder} 
+//                 disabled={isAddingAll}
+//                 style={{ 
+//                   background: isAddingAll ? '#ccc' : '#4CAF50', 
+//                   color: 'white', 
+//                   border: 'none', 
+//                   padding: '5px 10px', 
+//                   borderRadius: '4px', 
+//                   cursor: isAddingAll ? 'wait' : 'pointer' 
+//                 }}
+//               >
+//                {isAddingAll ? '⏳ Adding...' : `➕ Add All (${data.files.length})`}
+//              </button>
+//             )}
+//             {path !== "" && <button onClick={navigateUp}>⬆️ Up</button>}
+//         </div>
+//       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+//       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
         
-        {/* Render Directories */}
-        {data.dirs.map((dir) => (
-          <div 
-            key={dir.path} 
-            onClick={() => setPath(dir.path)}
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', background: '#fff', cursor: 'pointer', border: '1px solid #eee', borderRadius: '4px' }}
-          >
-            <div>📁 <strong>{dir.name}</strong></div>
-            <button 
-              onClick={(e) => handleAddSubFolder(dir.path, e)}
-              disabled={addingFolder === dir.path}
-              style={{ 
-                cursor: addingFolder === dir.path ? 'wait' : 'pointer',
-                opacity: addingFolder === dir.path ? 0.6 : 1
-              }}
-            >
-              {addingFolder === dir.path ? '⏳ Scanning...' : '➕ Add Folder'}
-            </button>
-          </div>
-        ))}
+//         {/* Render Directories */}
+//         {data.dirs.map((dir) => (
+//           <div 
+//             key={dir.path} 
+//             onClick={() => setPath(dir.path)}
+//             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', background: '#fff', cursor: 'pointer', border: '1px solid #eee', borderRadius: '4px' }}
+//           >
+//             <div>📁 <strong>{dir.name}</strong></div>
+//             <button 
+//               onClick={(e) => handleAddSubFolder(dir.path, e)}
+//               disabled={addingFolder === dir.path}
+//               style={{ 
+//                 cursor: addingFolder === dir.path ? 'wait' : 'pointer',
+//                 opacity: addingFolder === dir.path ? 0.6 : 1
+//               }}
+//             >
+//               {addingFolder === dir.path ? '⏳ Scanning...' : '➕ Add Folder'}
+//             </button>
+//           </div>
+//         ))}
 
-        {/* Render MP3 Files */}
-        {data.files.map((song) => (
-          <div 
-            key={song.id} 
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', padding: '10px', borderRadius: '4px', border: '1px solid #eee' }}
-          >
-            <span>🎵 {song.title}</span>
-            <button 
-              onClick={() => addSong({ ...song, id: crypto.randomUUID() })}
-              style={{ cursor: 'pointer' }}
-            >
-              ➕ Add
-            </button>
-          </div>
-        ))}
+//         {/* Render MP3 Files */}
+//         {data.files.map((song) => (
+//           <div 
+//             key={song.id} 
+//             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', padding: '10px', borderRadius: '4px', border: '1px solid #eee' }}
+//           >
+//             <span>🎵 {song.title}</span>
+//             <button 
+//               onClick={() => addSong({ ...song, id: crypto.randomUUID() })}
+//               style={{ cursor: 'pointer' }}
+//             >
+//               ➕ Add
+//             </button>
+//           </div>
+//         ))}
 
-        {data.dirs.length === 0 && data.files.length === 0 && <p style={{ color: '#888' }}>This folder is empty.</p>}
-      </div>
-    </div>
-  );
-}
+//         {data.dirs.length === 0 && data.files.length === 0 && <p style={{ color: '#888' }}>This folder is empty.</p>}
+//       </div>
+//     </div>
+//   );
+// }
 
 export default function SongPicker() {
   const [data, setData] = useState({ dirs: [], files: [], currentPath: "" });
   const [searchQuery, setSearchQuery] = useState("");
+  const [isAddingAll, setIsAddingAll] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
-  const { addSong, addFolder, config, updateConfig } = useStore();
+  const { addSong, addSongs, addFolder, config, updateConfig } = useStore();
 
-  const fetchPath = async (path = "", recursive = false) => {
-    const url = `${API_BASE_URL}/songs.php?path=${encodeURIComponent(path)}${recursive ? '&recursive=true' : ''}`;
+const fetchPath = async (path = "", recursive = false, searchTerm = "") => {
+    let url = `${API_BASE_URL}/songs.php?path=${encodeURIComponent(path)}`;
+    if (recursive) url += '&recursive=true';
+    if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
+
     try {
       const res = await fetch(url);
       const json = await res.json();
       setData(json);
-
       updateConfig({ lastPath: path });
+
+      if (!searchTerm) {
+        setSearchQuery("");
+      }
     } catch (err) {
       console.error("Fetch error:", err);
     }
@@ -170,10 +178,83 @@ export default function SongPicker() {
   // Safe split for breadcrumbs
   const breadcrumbs = (data.currentPath || "").split('/').filter(Boolean);
   
-  // Safe filter for files
-  const filteredFiles = (data.files || []).filter(file => 
-    file.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Safe, broad, multi-word filter for files
+  const filteredFiles = (data.files || []).filter(file => {
+    if (!searchQuery.trim()) return true;
+    
+    // 1. Split the search query into individual words (ignoring extra spaces)
+    const searchTerms = searchQuery.toLowerCase().split(' ').filter(Boolean);
+    
+    // 2. Mash all the track's searchable data into one giant string
+    const searchableText = [
+      file.title,
+      file.album,
+      file.folder,
+      file.url
+    ].filter(Boolean).join(' ').toLowerCase();
+
+    // 3. Return true ONLY if every single search word is found somewhere in that giant string
+    return searchTerms.every(term => searchableText.includes(term));
+  });
+
+  const handleQueueAll = async () => {
+    // Prevent clicking if there are no files AND no folders
+    if (filteredFiles.length === 0 && (!data.dirs || data.dirs.length === 0)) return;
+    
+    setIsAddingAll(true);
+    
+    try {
+      // 1. Start with the files already in the current directory (respecting the search filter)
+      let allSongsToQueue = [...filteredFiles];
+
+      // 2. Fetch files from immediate subdirectories (1 level deep)
+      if (data.dirs && data.dirs.length > 0) {
+        // Create an array of fetch promises for each sub-directory
+        // Note: We intentionally do NOT use &recursive=true here
+        const subDirPromises = data.dirs.map(dir =>
+          fetch(`${API_BASE_URL}/songs.php?path=${encodeURIComponent(dir.path)}`)
+            .then(res => res.json())
+            .catch(err => {
+              console.error(`Failed to fetch ${dir.path}:`, err);
+              return { files: [] }; // Fallback to empty array if a folder fails
+            })
+        );
+
+        // Wait for all sub-directory fetches to finish simultaneously
+        const subDirResults = await Promise.all(subDirPromises);
+
+        // 3. Extract the files and apply the same search filter
+        subDirResults.forEach(result => {
+          if (result.files && result.files.length > 0) {
+            const matchingSubFiles = result.files.filter(file =>
+              file.title.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+            allSongsToQueue = [...allSongsToQueue, ...matchingSubFiles];
+          }
+        });
+      }
+
+      // 4. Send everything to Zustand
+      if (allSongsToQueue.length > 0) {
+        addSongs(allSongsToQueue);
+      } else {
+        alert("No MP3s found in this folder or its immediate sub-folders.");
+      }
+
+    } catch (error) {
+      console.error("Failed to queue folders:", error);
+    } finally {
+      setIsAddingAll(false);
+    }
+  };
+
+  const handleDeepSearch = async () => {
+    if (!searchQuery.trim()) return;
+    setIsSearching(true);
+    // Search starting from the current directory path
+    await fetchPath(data.currentPath, false, searchQuery);
+    setIsSearching(false);
+  };
 
   return (
     // Outer Wrapper
@@ -186,42 +267,98 @@ export default function SongPicker() {
             ========================================= */}
         <div className="sticky top-14 sm:top-16 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md sm:rounded-t-2xl border-b border-slate-200 dark:border-slate-700 shadow-sm transition-colors duration-300">
           
-          {/* Breadcrumbs */}
-          <div className="p-3 sm:p-4 flex flex-wrap items-center gap-2 border-b border-slate-100 dark:border-slate-800/50">
-            <button 
-              onClick={() => fetchPath("")}
-              className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-bold text-xs sm:text-sm uppercase tracking-wider shrink-0 transition-colors"
-            >
-              Root
-            </button>
-            {breadcrumbs.map((crumb, i) => (
-              <React.Fragment key={i}>
-                <span className="text-slate-400 dark:text-slate-600 shrink-0">/</span>
-                <button 
-                  onClick={() => fetchPath(breadcrumbs.slice(0, i + 1).join('/'))}
-                  className="text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white text-xs sm:text-sm font-medium shrink-0 transition-colors"
-                >
-                  {crumb}
-                </button>
-              </React.Fragment>
-            ))}
+        {/* UPDATED: Breadcrumbs + Queue All Container */}
+          <div className="p-3 sm:p-4 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800/50">
+            
+            {/* Left Side: Breadcrumbs */}
+            <div className="flex flex-wrap items-center gap-2 flex-grow min-w-0 pr-4">
+              <button 
+                onClick={() => fetchPath("")}
+                className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-bold text-xs sm:text-sm uppercase tracking-wider shrink-0 transition-colors"
+              >
+                Root
+              </button>
+              {breadcrumbs.map((crumb, i) => (
+                <React.Fragment key={i}>
+                  <span className="text-slate-400 dark:text-slate-600 shrink-0">/</span>
+                  <button 
+                    onClick={() => fetchPath(breadcrumbs.slice(0, i + 1).join('/'))}
+                    className="text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white text-xs sm:text-sm font-medium shrink-0 transition-colors"
+                  >
+                    {crumb}
+                  </button>
+                </React.Fragment>
+              ))}
+            </div>
+
+ {/* Right Side: Queue All Button */}
+            {(filteredFiles.length > 0 || (data.dirs && data.dirs.length > 0)) && (
+              <button 
+                onClick={handleQueueAll}
+                disabled={isAddingAll}
+                className={`shrink-0 flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all
+                  ${isAddingAll 
+                    ? 'bg-slate-200 text-slate-500 cursor-wait dark:bg-slate-800 dark:text-slate-400' 
+                    : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 shadow-sm'
+                  }`}
+              >
+                {isAddingAll ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Queuing...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                    {/* NEW: Smart text swapping based on search state */}
+                    {searchQuery.trim() !== "" ? "Queue Results" : "Queue Folder"}
+                  </>
+                )}
+              </button>
+            )}
+
           </div>
 
-          {/* Search Bar */}
-          <div className="p-3 sm:p-4">
-            <div className="relative">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
-              </svg>
-              <input 
-                type="text"
-                placeholder="Search this folder..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
-              />
+          {/* Search Bar & Deep Search Button */}
+          <div className="p-3 sm:p-4 border-b border-slate-100 dark:border-slate-800/50">
+            <div className="flex gap-2">
+              
+              {/* The Input (Takes up remaining space) */}
+              <div className="relative flex-grow">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+                </svg>
+                <input 
+                  type="text"
+                  placeholder="Filter or Search..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleDeepSearch(); }} // <-- Quick Enter key support
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
+                />
+              </div>
+
+              {/* The Deep Search Button */}
+              <button
+                onClick={handleDeepSearch}
+                disabled={isSearching || !searchQuery.trim()}
+                className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all
+                  ${isSearching || !searchQuery.trim()
+                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed dark:bg-slate-800 dark:text-slate-500' 
+                    : 'bg-slate-800 text-white hover:bg-slate-700 active:scale-95 dark:bg-slate-700 dark:hover:bg-slate-600 shadow-sm'
+                  }`}
+              >
+                {isSearching ? 'Searching...' : 'Search Directory'}
+              </button>
+
             </div>
           </div>
+
         </div>
 
         {/* =========================================
@@ -254,9 +391,23 @@ export default function SongPicker() {
                     <path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" />
                   </svg>
                 </div>
-                <span className="text-sm sm:text-base font-medium text-slate-700 dark:text-slate-300 truncate group-hover:text-indigo-600 dark:group-hover:text-white transition-colors">
-                  {file.title}
-                </span>
+                
+                {/* UPDATED: Title and Context Column */}
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm sm:text-base font-medium text-slate-700 dark:text-slate-300 truncate group-hover:text-indigo-600 dark:group-hover:text-white transition-colors">
+                    {file.title}
+                  </span>
+                  
+                  {/* NEW: Display Folder and/or Album context below the title */}
+                  {(file.folder || (file.album && file.album !== 'Unknown Album')) && (
+                    <span className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">
+                      {file.folder ? `📁 ${file.folder}` : ''} 
+                      {file.folder && file.album && file.album !== 'Unknown Album' ? ' • ' : ''} 
+                      {file.album && file.album !== 'Unknown Album' ? `💿 ${file.album}` : ''}
+                    </span>
+                  )}
+                </div>
+
               </div>
 
               {/* Queue Button */}
