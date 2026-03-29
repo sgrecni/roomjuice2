@@ -8,7 +8,9 @@ import Settings from './Settings';
 export default function App() {
   const { config, updateConfig } = useStore();
   const audioRef = useRef(null);
-  
+  // const isAuth = useStore(state => state.isAuth);
+  // const setAuth = useStore(state => state.setAuth);
+
   // Settings Modal State
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -62,6 +64,25 @@ export default function App() {
     };
   }, [isDragging, onDrag, stopDragging]);
 
+  // const handleLogout = async () => {
+  //   try {
+  //     // 1. Tell the PHP server to destroy the HTTP cookie
+  //     await fetch(`${API_BASE_URL}/logout.php`, { 
+  //       credentials: 'include' 
+  //     });
+  //   } catch (err) {
+  //     console.error("Logout network error:", err);
+  //   } finally {
+  //     // 2. Always flip the Zustand switch to false, even if the network fails.
+  //     // This instantly unmounts the player and drops them at the Login screen.
+  //     setAuth(false);
+  //   }
+  // };
+
+  // if (!isAuth) {
+  //   return <Login />;
+  // }
+
   return (
     // The master wrapper controls the global background and text color based on the theme
     <div 
@@ -88,6 +109,13 @@ export default function App() {
             <circle cx="12" cy="12" r="3" />
           </svg>
         </button>
+{/* 
+        <button 
+          onClick={handleLogout}
+          className="px-4 py-2 text-sm font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400 rounded-lg transition-all active:scale-95"
+        >
+          Logout
+        </button> */}
       </header>
 
       {/* Main Layout */}

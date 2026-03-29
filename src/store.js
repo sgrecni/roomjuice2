@@ -8,6 +8,7 @@ const defaultConfig = {
   lastPath: '',
   hidePlayed: false,
   isEqEnabled: true,
+  streamingUrl: 'https://paradise.gifpaste.net/rjapi/',
 };
 
 const loadConfig = () => {
@@ -29,6 +30,9 @@ const loadConfig = () => {
 export const useStore = create(
   persist(
     (set, get) => ({
+      isAuth: false,
+      setAuth: (status) => set({ isAuth: status }),
+
       // The new configuration object
       config: loadConfig(),
 

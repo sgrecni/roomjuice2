@@ -87,7 +87,7 @@ export default function Player({ audioRef }) {
       if (currentSong) {
         navigator.mediaSession.metadata = new MediaMetadata({
           title: currentSong.title || "Unknown Track",
-          artist: "RoomJuice", // We don't have ID3 tags yet, so we'll use the app name!
+          artist: "Unknown Artist",
           album: "Local Library"
         });
       }
@@ -134,6 +134,11 @@ export default function Player({ audioRef }) {
       </div>
     );
   }
+  
+  const streamingSrc = currentSong 
+  // ? `${config.streamingUrl}play.php?file=${encodeURIComponent(currentSong.url)}` 
+  ? `${config.streamingUrl}play.php?file=${currentSong.url}` 
+  : '';
 
   return (
     <div className="p-6 bg-white dark:bg-slate-900 text-slate-800 dark:text-white rounded-2xl shadow-xl mb-6 flex flex-col w-full border border-slate-200 dark:border-slate-800 transition-colors duration-300">
@@ -141,8 +146,9 @@ export default function Player({ audioRef }) {
       {/* Hidden Audio Element */}
       <audio 
         ref={audioRef}
-        src={currentSong?.url}
-        crossOrigin="anonymous" /* 3. CRITICAL for the Web Audio API to work! */
+        src={streamingSrc}
+        // crossOrigin="anonymous" /* 3. CRITICAL for the Web Audio API to work! */
+        crossOrigin="use-credentials" /* <-- THE MAGIC KEY */
         onTimeUpdate={(e) => setCurrentTime(e.target.currentTime)}
         onLoadedMetadata={(e) => setDuration(e.target.duration)}
         onEnded={next} // Automatically skip to next track

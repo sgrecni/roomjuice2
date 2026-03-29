@@ -49,7 +49,7 @@ export default function Playlist({ audioRef }) {
       <div className="w-full pb-2">
         {playlist.length === 0 ? (
           <div className="p-10 text-center text-slate-500 dark:text-slate-400 italic text-sm transition-colors duration-300">
-            Playlist is empty. Browse below to add some music!
+            Playlist is empty. Browse to add some music!
           </div>
         ) : (
           <div className="flex flex-col w-full">

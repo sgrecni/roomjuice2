@@ -1,22 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { useStore } from './store';
-import { API_BASE_URL } from './config';
 
 export default function SongPicker() {
   const [data, setData] = useState({ dirs: [], files: [], currentPath: "" });
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddingAll, setIsAddingAll] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const isAuth = useStore(state => state.isAuth);``
 
   const { addSong, addSongs, addFolder, config, updateConfig } = useStore();
 
   const fetchPath = async (path = "", recursive = false, searchTerm = "") => {
-    let url = `${API_BASE_URL}/songs.php?path=${encodeURIComponent(path)}`;
+    let url = `${config.streamingUrl}songs.php?path=${encodeURIComponent(path)}`;
     if (recursive) url += '&recursive=true';
     if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
 
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, { credentials: 'include' });
       const json = await res.json();
       setData(json);
       updateConfig({ lastPath: path });
@@ -30,8 +30,12 @@ export default function SongPicker() {
   };
 
   useEffect(() => { 
-    fetchPath(config.lastPath || ""); 
+    fetchPath(config.lastPath || "");
   }, []);
+
+  useEffect(() => {
+    fetchPath(config.lastPath || "")
+  }, [isAuth, config.streamingUrl]);
 
   // Safe split for breadcrumbs
   const breadcrumbs = (data.currentPath || "").split('/').filter(Boolean);
@@ -70,7 +74,7 @@ export default function SongPicker() {
         // Create an array of fetch promises for each sub-directory
         // Note: We intentionally do NOT use &recursive=true here
         const subDirPromises = data.dirs.map(dir =>
-          fetch(`${API_BASE_URL}/songs.php?path=${encodeURIComponent(dir.path)}`)
+          fetch(`${config.streamingUrl}songs.php?path=${encodeURIComponent(dir.path)}`)
             .then(res => res.json())
             .catch(err => {
               console.error(`Failed to fetch ${dir.path}:`, err);
