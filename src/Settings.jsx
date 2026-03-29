@@ -74,6 +74,15 @@ export default function Settings({ isOpen, onClose }) {
             </div>
           </div>
 
+      <label className="flex items-center gap-3 cursor-pointer">
+        <input 
+          type="checkbox" 
+          className="w-5 h-5 accent-indigo-500 rounded cursor-pointer"
+          checked={config.isEqEnabled}
+          onChange={() => updateConfig({ isEqEnabled: !config.isEqEnabled })}
+        />
+        <span className="text-sm font-medium">Enable Spectrum Analyzer</span>
+      </label>
         </div>
       </div>
     </div>

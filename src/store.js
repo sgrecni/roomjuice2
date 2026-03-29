@@ -6,7 +6,8 @@ const defaultConfig = {
   volume: 0.8, 
   theme: 'dark',
   lastPath: '',
-  hidePlayed: false
+  hidePlayed: false,
+  isEqEnabled: true,
 };
 
 const loadConfig = () => {
@@ -42,21 +43,35 @@ export const useStore = create(
       currentIndex: 0,
       isPlaying: false,
 
-      // Add a single song
-      addSong: (song) => set((state) => ({ 
-        playlist: [...state.playlist, song] 
-      })),
+      // Add a single song and auto-play if it's the first one
+      addSong: (song) => set((state) => {
+        const isPlaylistEmpty = state.playlist.length === 0;
+        
+        return { 
+          playlist: [...state.playlist, song],
+          // If the playlist was empty, immediately start playing
+          isPlaying: isPlaylistEmpty ? true : state.isPlaying,
+          // Ensure we are pointing at the first track
+          currentIndex: isPlaylistEmpty ? 0 : state.currentIndex
+        };
+      }),
 
-      // NEW: Add multiple songs at once (great for folders)
+      // Add multiple songs at once and auto-play the first one if empty
       addSongs: (newSongs) => set((state) => {
-        // Ensure every incoming song gets a unique ID for the playlist
+        if (!newSongs || newSongs.length === 0) return state;
+
         const songsWithIds = newSongs.map(song => ({
           ...song,
           id: crypto.randomUUID()
         }));
         
+        const isPlaylistEmpty = state.playlist.length === 0;
+        
         return { 
-          playlist: [...state.playlist, ...songsWithIds] 
+          playlist: [...state.playlist, ...songsWithIds],
+          // If empty, start playing the first song in the newly added batch
+          isPlaying: isPlaylistEmpty ? true : state.isPlaying,
+          currentIndex: isPlaylistEmpty ? 0 : state.currentIndex
         };
       }),
 

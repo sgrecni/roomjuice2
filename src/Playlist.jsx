@@ -74,7 +74,7 @@ export default function Playlist({ audioRef }) {
                 >
                   
                   {/* 4. THE EQ BACKGROUND: Renders only if this song is playing */}
-                  {isPlaying && (
+                  {isPlaying && config.isEqEnabled && (
                     <div className="absolute inset-0 z-0 pointer-events-none opacity-15 dark:opacity-20">
                       <AudioSpectrumEQ 
                         audioRef={audioRef} 
