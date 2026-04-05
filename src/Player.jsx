@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { useStore } from './store';
+import { useStore, isAppleMobile } from './store';
 
 export default function Player({ audioRef }) {
   const { config, playlist, currentIndex, isPlaying, togglePlay, next, previous } = useStore();
@@ -8,7 +8,32 @@ export default function Player({ audioRef }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
+  //  use this key to force React to DESTROY and REBUILD the video tag
+  // from scratch whenever the EQ setting changes.
+  const [playerKey, setPlayerKey] = useState(Date.now());
+
   const currentSong = playlist[currentIndex];
+  const isApple = isAppleMobile();
+
+  const streamingSrc = currentSong
+  ? `${config.streamingUrl}play.php?file=${currentSong.url}`
+  : '';
+
+  const commonMediaProps = {
+    ref: audioRef,
+    src: streamingSrc, // Your existing stream URL logic
+    crossOrigin: "use-credentials",
+    onTimeUpdate: (e) => setCurrentTime(e.target.currentTime),
+    onLoadedMetadata: (e) => setDuration(e.target.duration),
+    onEnded: next,
+    style: { display: 'none', width: 0, height: 0 }
+  };
+
+  useEffect(() => {
+    // If they toggle the EQ in settings, generate a new key.
+    // This gives us a fresh, untainted <video> element
+    setPlayerKey(Date.now());
+  }, [config.isEqEnabled]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -19,7 +44,7 @@ export default function Player({ audioRef }) {
     }
   }, [config.volume]);
 
-// React to Play/Pause state changes
+  // React to Play/Pause state changes
   useEffect(() => {
     if (audioRef.current) {
       if (isPlaying) {
@@ -87,7 +112,7 @@ export default function Player({ audioRef }) {
       if (currentSong) {
         navigator.mediaSession.metadata = new MediaMetadata({
           title: currentSong.title || "Unknown Track",
-          artist: "Unknown Artist",
+          artist: currentSong.artist || "Unknown Artist",
           album: "Local Library"
         });
       }
@@ -134,27 +159,52 @@ export default function Player({ audioRef }) {
       </div>
     );
   }
-  
-  const streamingSrc = currentSong 
-  // ? `${config.streamingUrl}play.php?file=${encodeURIComponent(currentSong.url)}` 
-  ? `${config.streamingUrl}play.php?file=${currentSong.url}` 
-  : '';
 
   return (
     <div className="p-6 bg-white dark:bg-slate-900 text-slate-800 dark:text-white rounded-2xl shadow-xl mb-6 flex flex-col w-full border border-slate-200 dark:border-slate-800 transition-colors duration-300">
       
+      {/* Serve Video to Apple, Audio to Everyone Else */}
+      {isApple ? (
+        <span>
+          video
+        <video
+          key={`apple-vid-${playerKey}`}
+          playsInline
+          webkit-playsinline="true"
+          {...commonMediaProps}
+        />
+        </span>
+      ) : (
+        <span>
+          audio
+        <audio
+          key={`android-aud-${playerKey}`}
+          {...commonMediaProps}
+        />
+        </span>
+      )}
+
       {/* Hidden Audio Element */}
-      <audio 
+      {/* <audio
+        key={playerKey}
         ref={audioRef}
         src={streamingSrc}
-        // crossOrigin="anonymous" /* 3. CRITICAL for the Web Audio API to work! */
-        crossOrigin="use-credentials" /* <-- THE MAGIC KEY */
+        crossOrigin="use-credentials"
         onTimeUpdate={(e) => setCurrentTime(e.target.currentTime)}
         onLoadedMetadata={(e) => setDuration(e.target.duration)}
         onEnded={next} // Automatically skip to next track
-        autoPlay={isPlaying}
-      />
-
+      /> */}
+    {/* <video 
+      key={playerKey}
+      ref={audioRef}
+      src={streamingSrc}
+      crossOrigin="use-credentials"
+      playsInline
+      webkit-playsinline="true"
+      onTimeUpdate={(e) => setCurrentTime(e.target.currentTime)}
+      onEnded={next}
+      style={{ display: 'none', width: 0, height: 0 }} // Make it completely invisible
+    /> */}
       {/* Now Playing Header */}
       <div className="mb-6 text-center">
         <p className="text-xs font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest mb-1">Now Playing</p>
