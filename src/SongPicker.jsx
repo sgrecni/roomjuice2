@@ -50,6 +50,7 @@ export default function SongPicker() {
     // 2. Mash all the track's searchable data into one giant string
     const searchableText = [
       file.title,
+      file.artist,
       file.album,
       file.folder,
       file.url
@@ -74,7 +75,7 @@ export default function SongPicker() {
         // Create an array of fetch promises for each sub-directory
         // Note: We intentionally do NOT use &recursive=true here
         const subDirPromises = data.dirs.map(dir =>
-          fetch(`${config.streamingUrl}songs.php?path=${encodeURIComponent(dir.path)}`)
+          fetch(`${config.streamingUrl}songs.php?path=${encodeURIComponent(dir.path)}`, { credentials: 'include' })
             .then(res => res.json())
             .catch(err => {
               console.error(`Failed to fetch ${dir.path}:`, err);
