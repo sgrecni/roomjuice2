@@ -1,13 +1,25 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+/* enabling the EQ on Apple mobile causes background music to be denied, so disable by default */
+export const isAppleMobile = () => {
+  if (typeof window === 'undefined') return false; // Safety check
+  
+  const ua = window.navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua);
+  
+  // Catch modern iPads that claim to be a Mac but have a touch screen
+  const isMacWithTouch = ua.includes('Macintosh') && navigator.maxTouchPoints > 1; 
+  
+  return isIOS || isMacWithTouch;
+};
 const defaultConfig = { 
   leftWidth: 400, 
   volume: 0.8, 
   theme: 'dark',
   lastPath: '',
   hidePlayed: false,
-  isEqEnabled: true,
+  isEqEnabled: !isAppleMobile(),
   streamingUrl: 'https://paradise.gifpaste.net/rjapi/',
 };
 
