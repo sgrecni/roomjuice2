@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { API_BASE_URL } from './config';
 
 /* enabling the EQ on Apple mobile causes background music to be denied, so disable by default */
 export const isAppleMobile = () => {
@@ -20,7 +21,7 @@ const defaultConfig = {
   lastPath: '',
   hidePlayed: false,
   isEqEnabled: !isAppleMobile(),
-  streamingUrl: 'https://paradise.gifpaste.net/rjapi/',
+  streamingUrl: API_BASE_URL || '',
 };
 
 const loadConfig = () => {

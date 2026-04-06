@@ -153,7 +153,7 @@ const handleLogin = async (e) => {
               </label>
               <input 
                 type="text" 
-                placeholder="e.g., https://paradise.gifpaste.net/rjapi/"
+                placeholder="e.g., https://domain.example.com/rjapi/"
                 value={config.streamingUrl || ''}
                 disabled={isAuth} 
                 onChange={e => updateConfig({ streamingUrl: e.target.value })}
