@@ -10,6 +10,15 @@ export default function SongPicker() {
 
   const { addSong, addSongs, addFolder, config, updateConfig } = useStore();
 
+  // reusable scroll function
+  const scrollToTop = () => {
+    // Push the scroll event to the very end of the browser's execution queue
+    // so it fires AFTER React has finished painting the new list
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' }); // 'auto' snaps instantly, which feels better for file browsers than 'smooth'
+    }, 0);
+  };
+
   const fetchPath = async (path = "", recursive = false, searchTerm = "") => {
     let url = `${config.streamingUrl}songs.php?path=${encodeURIComponent(path)}`;
     if (recursive) url += '&recursive=true';
@@ -20,7 +29,7 @@ export default function SongPicker() {
       const json = await res.json();
       setData(json);
       updateConfig({ lastPath: path });
-
+      scrollToTop()
       if (!searchTerm) {
         setSearchQuery("");
       }
