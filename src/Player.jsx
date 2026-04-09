@@ -1,8 +1,8 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useStore, isAppleMobile } from './store';
 
 export default function Player({ audioRef }) {
-  const { config, playlist, currentIndex, isPlaying, togglePlay, next, previous } = useStore();
+  const { config, playlist, currentIndex, isPlaying, togglePlay, next, previous, play, pause } = useStore();
   
   // Local state for the progress bar and timers
   const [currentTime, setCurrentTime] = useState(0);
@@ -11,6 +11,9 @@ export default function Player({ audioRef }) {
   //  use this key to force React to DESTROY and REBUILD the video tag
   // from scratch whenever the EQ setting changes.
   const [playerKey, setPlayerKey] = useState(Date.now());
+
+  const timeSnapshotRef = useRef(0);
+  const wasPlayingSnapshotRef = useRef(false);
 
   const currentSong = playlist[currentIndex];
   const isApple = isAppleMobile();
@@ -25,15 +28,55 @@ export default function Player({ audioRef }) {
     crossOrigin: "use-credentials",
     onTimeUpdate: (e) => setCurrentTime(e.target.currentTime),
     onLoadedMetadata: (e) => setDuration(e.target.duration),
+    onPlay: play,
+    onPause: pause,   // Sync store if paused natively
     onEnded: next,
+    onError: (e) => {
+      console.warn("Media Error (likely hibernation or network drop):", e.target.error);
+      pause(); // Force UI to pause
+      // Optional: You could trigger a playerKey change here to force a remount
+      // setPlayerKey(Date.now()); 
+    },
+    onWaiting: () => {
+      // The browser is trying to play but the buffer is empty.
+      console.info("Waiting for data...");
+    },
     style: { display: 'none', width: 0, height: 0 }
   };
 
+  // THE DESTRUCTION TRIGGER
   useEffect(() => {
-    // If they toggle the EQ in settings, generate a new key.
-    // This gives us a fresh, untainted <video> element
+    // Before we destroy the element, grab its final state
+    if (audioRef.current) {
+      timeSnapshotRef.current = audioRef.current.currentTime;
+      wasPlayingSnapshotRef.current = isPlaying;
+    }
+    // Now trigger the destruction
     setPlayerKey(Date.now());
-  }, [config.isEqEnabled]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config.isEqEnabled]); // Only run when EQ toggles
+
+  // THE REBIRTH INJECTION
+  useEffect(() => {
+    // This runs immediately after React mounts the NEW audio element
+    // triggered by the new playerKey.
+    if (audioRef.current && timeSnapshotRef.current > 0) {
+      // Restore the exact timestamp
+      audioRef.current.currentTime = timeSnapshotRef.current;
+
+      // If it was playing before we destroyed it, force it to play again
+      if (wasPlayingSnapshotRef.current) {
+        audioRef.current.play().catch(error => {
+           console.warn("Baton handoff play blocked:", error);
+           pause(); // Sync store if the browser rejected the rebirth autoplay
+        });
+      }
+
+      // Clear the snapshot so normal track changes don't inherit this time
+      timeSnapshotRef.current = 0;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playerKey]); // Only run when the key (and thus the element) changes
 
   useEffect(() => {
     if (audioRef.current) {
@@ -42,29 +85,32 @@ export default function Player({ audioRef }) {
       const safeVolume = Number.isFinite(config.volume) ? config.volume : 0.8;
       audioRef.current.volume = Math.max(0, Math.min(1, safeVolume));
     }
-  }, [config.volume]);
+  }, [config.volume, audioRef]);
 
   // React to Play/Pause state changes
   useEffect(() => {
     if (audioRef.current) {
       if (isPlaying) {
-        // Capture the promise returned by the play() attempt
         const playPromise = audioRef.current.play();
         
         if (playPromise !== undefined) {
           playPromise.catch(error => {
-            console.warn("Browser blocked autoplay on reload:", error);
-            // The browser stopped the music. 
-            // Our UI is stuck on 'true'. We call togglePlay() to flip it back to 'false'.
-            togglePlay(); 
+            if (error.name === 'AbortError') return; // Normal during track skip
+
+            console.warn("Play failed (Hibernation/Network?):", error);
+            pause(); // Sync the UI back to paused
+
+            // If it's a network error from waking up, force the browser to re-fetch the src
+            if (error.name === 'NotSupportedError' || error.message.includes('network')) {
+               audioRef.current.load(); 
+            }
           });
         }
       } else {
         audioRef.current.pause();
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPlaying, currentIndex, playlist]);
+  }, [isPlaying, currentIndex, playlist, streamingSrc, audioRef, togglePlay]);
 
   // =========================================
   // KEYBOARD SHORTCUTS (Space, Left, Right)
@@ -101,6 +147,7 @@ export default function Player({ audioRef }) {
     // Cleanup function so we don't cause memory leaks if the component unmounts
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [togglePlay, previous, next]);
+
   // =========================================
   // OS NATIVE MEDIA CONTROLS (Media Session API)
   // =========================================
@@ -117,15 +164,8 @@ export default function Player({ audioRef }) {
         });
       }
 
-      // 3. Wire up the physical keyboard keys to your Zustand store
-      navigator.mediaSession.setActionHandler('play', () => {
-        if (!isPlaying) togglePlay(); // Only toggle if it's actually paused
-      });
-      
-      navigator.mediaSession.setActionHandler('pause', () => {
-        if (isPlaying) togglePlay(); // Only toggle if it's actually playing
-      });
-      
+      navigator.mediaSession.setActionHandler('play', play);
+      navigator.mediaSession.setActionHandler('pause', pause);
       navigator.mediaSession.setActionHandler('previoustrack', previous);
       navigator.mediaSession.setActionHandler('nexttrack', next);
     }
@@ -184,27 +224,6 @@ export default function Player({ audioRef }) {
         </span>
       )}
 
-      {/* Hidden Audio Element */}
-      {/* <audio
-        key={playerKey}
-        ref={audioRef}
-        src={streamingSrc}
-        crossOrigin="use-credentials"
-        onTimeUpdate={(e) => setCurrentTime(e.target.currentTime)}
-        onLoadedMetadata={(e) => setDuration(e.target.duration)}
-        onEnded={next} // Automatically skip to next track
-      /> */}
-    {/* <video 
-      key={playerKey}
-      ref={audioRef}
-      src={streamingSrc}
-      crossOrigin="use-credentials"
-      playsInline
-      webkit-playsinline="true"
-      onTimeUpdate={(e) => setCurrentTime(e.target.currentTime)}
-      onEnded={next}
-      style={{ display: 'none', width: 0, height: 0 }} // Make it completely invisible
-    /> */}
       {/* Now Playing Header */}
       <div className="mb-6 text-center">
         <p className="text-xs font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest mb-1">Now Playing</p>
