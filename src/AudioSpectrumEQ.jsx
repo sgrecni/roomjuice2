@@ -1,27 +1,23 @@
 import React, { useEffect, useRef } from 'react';
 
-// ==========================================
 // TRUE SINGLETONS
-// ==========================================
 let globalAudioContext = null;
 let globalAnalyserNode = null;
-let globalSourceNode = null;
 
 export default function AudioSpectrumEQ({ audioRef, color = '#6366f1', barCount = 32 }) {
   const containerRef = useRef(null);
   const animationRef = useRef(null);
-  
-  // Use a ref to act as a traffic light for the animation loop
   const isDrawing = useRef(true); 
 
   useEffect(() => {
-    const initAudioEngine = async () => {
-      if (!audioRef?.current) return;
+    const audioElement = audioRef?.current;
+    if (!audioElement) return;
 
+    const initAudioEngine = () => {
       try {
         if (!globalAudioContext) {
           const AudioContext = window.AudioContext || window.webkitAudioContext;
-          globalAudioContext = new AudioContext();
+          globalAudioContext = new AudioContext(); 
           
           globalAnalyserNode = globalAudioContext.createAnalyser();
           globalAnalyserNode.fftSize = 64;
@@ -32,76 +28,61 @@ export default function AudioSpectrumEQ({ audioRef, color = '#6366f1', barCount 
           globalAnalyserNode.connect(globalAudioContext.destination);
         }
 
-        if (globalAudioContext.state === 'suspended') {
-          await globalAudioContext.resume();
+        // Attach the pipes synchronously
+        if (!audioElement._sourceNode) {
+          audioElement._sourceNode = globalAudioContext.createMediaElementSource(audioElement);
         }
+        audioElement._sourceNode.connect(globalAnalyserNode);
 
-        if (!audioRef.current._isPluggedIntoEQ) {
-          globalSourceNode = globalAudioContext.createMediaElementSource(audioRef.current);
-          globalSourceNode.connect(globalAnalyserNode);
-          audioRef.current._isPluggedIntoEQ = true;
+        // Wake it up
+        if (globalAudioContext.state === 'suspended') {
+          globalAudioContext.resume().catch(e => console.warn("Resume blocked:", e));
         }
 
         isDrawing.current = true;
         startAnimation();
       } catch (error) {
-        console.error("Audio engine init error", error);
+        console.error("Audio engine wiring error", error);
       }
     };
 
-    // ==========================================
-    // THE NEW VISIBILITY TRAFFIC COP
-    // ==========================================
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        // App went to background: ONLY stop the math and rendering to save battery.
-        // DO NOT unplug the audio nodes, or the video element will freeze!
         isDrawing.current = false;
-        if (animationRef.current) {
-          cancelAnimationFrame(animationRef.current);
-        }
+        if (animationRef.current) cancelAnimationFrame(animationRef.current);
       } else {
-        // App came back to foreground: Turn the light green and resume drawing
         isDrawing.current = true;
-        const audioElement = audioRef?.current;
         if (audioElement && !audioElement.paused) {
           startAnimation();
         }
       }
     };
 
-    const audioElement = audioRef?.current;
+    // =========================================
+    // LISTEN FOR THE CUSTOM EVENT
+    // =========================================
+    audioElement.addEventListener('wire-eq-now', initAudioEngine);
     
-    if (audioElement) {
-      audioElement.addEventListener('play', initAudioEngine);
-      if (!audioElement.paused) initAudioEngine(); 
-    }
+    // Keep the native play fallback just in case the OS triggers playback natively
+    audioElement.addEventListener('play', initAudioEngine); 
+
+    if (!audioElement.paused) initAudioEngine(); 
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      // 1. Stop animations and listeners
       isDrawing.current = false;
       cancelAnimationFrame(animationRef.current);
-      if (audioElement) audioElement.removeEventListener('play', initAudioEngine);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-
-      // 2. Destructive cleanup ONLY happens when the user explicitly unmounts the EQ in settings
-      if (globalSourceNode) {
-        globalSourceNode.disconnect();
-        globalSourceNode = null;
-      }
-      if (globalAnalyserNode) {
-        globalAnalyserNode.disconnect();
-        globalAnalyserNode = null;
-      }
-      if (globalAudioContext && globalAudioContext.state !== 'closed') {
-        globalAudioContext.close();
-        globalAudioContext = null;
-      }
+      
       if (audioElement) {
-        delete audioElement._isPluggedIntoEQ;
+        audioElement.removeEventListener('wire-eq-now', initAudioEngine);
+        audioElement.removeEventListener('play', initAudioEngine);
+        if (audioElement._sourceNode) {
+          audioElement._sourceNode.disconnect();
+        }
       }
+      
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [audioRef]);
 
@@ -110,7 +91,6 @@ export default function AudioSpectrumEQ({ audioRef, color = '#6366f1', barCount 
     const dataArray = new Uint8Array(globalAnalyserNode.frequencyBinCount);
 
     const animate = () => {
-      // If the screen is locked, kill the loop instantly
       if (!isDrawing.current || !containerRef.current || !globalAnalyserNode) return;
 
       globalAnalyserNode.getByteFrequencyData(dataArray);
