@@ -2,9 +2,22 @@ import React from 'react';
 import { useStore } from './store';
 import AudioSpectrumEQ from './AudioSpectrumEQ'; // 1. Import the visualizer
 
+const FlatlineEQ = ({ color = '#6366f1', barCount = 32 }) => (
+  <div className="w-full h-full flex items-end justify-between gap-[2px]">
+    {Array.from({ length: barCount }).map((_, i) => (
+      <div
+        key={`flat-${i}`}
+        className="flex-1 rounded-t-sm transition-all duration-[50ms] ease-linear origin-bottom"
+        style={{ backgroundColor: color, height: '10%' }} // Fixed at 10%
+      />
+    ))}
+  </div>
+);
+
 // 2. Accept audioRef as a prop from the parent that holds the Player
 export default function Playlist({ audioRef }) {
-  const { playlist, currentIndex, removeSong, playSpecificSong, clearPlaylist, config, updateConfig } = useStore();
+  const { playlist, currentIndex, removeSong, playSpecificSong, clearPlaylist,
+          config, updateConfig, isPlaying, playerKey } = useStore();
   
   const hidePlayed = config.hidePlayed || false;
 
@@ -54,7 +67,7 @@ export default function Playlist({ audioRef }) {
         ) : (
           <div className="flex flex-col w-full">
             {playlist.map((song, index) => {
-              const isPlaying = index === currentIndex;
+              const currentSong = index === currentIndex;
               const isPlayed = index < currentIndex;
               
               if (hidePlayed && isPlayed) {
@@ -67,27 +80,37 @@ export default function Playlist({ audioRef }) {
                   onClick={() => playSpecificSong(index)}
                   // 3. CRITICAL: Added `relative overflow-hidden` here so the EQ stays inside the bounds
                   className={`relative overflow-hidden cursor-pointer flex items-center justify-between p-3 sm:p-4 border-b border-slate-100 dark:border-slate-800/50 transition-colors group w-full ${
-                    isPlaying 
+                    currentSong 
                       ? 'bg-indigo-50 dark:bg-indigo-500/10 border-l-4 border-l-indigo-500' 
                       : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 border-l-4 border-l-transparent'
                   }`}
                 >
                   
-                  {/* 4. THE EQ BACKGROUND: Renders only if this song is playing */}
-                  {isPlaying && config.isEqEnabled && (
+                  {/* 4. THE EQ BACKGROUND: Renders only if this song is actually playing */}
+                  {config.isEqEnabled && currentSong && (
                     <div className="absolute inset-0 z-0 pointer-events-none opacity-15 dark:opacity-20">
-                      <AudioSpectrumEQ 
-                        audioRef={audioRef} 
-                        color="#6366f1" // Tailwind indigo-500 to match your theme
-                        barCount={40}   // Higher bar count looks better as a wide background
-                      />
+                      {isPlaying ? (
+                        // THE REAL DEAL: Mounts and wires up the Web Audio API safely
+                        <AudioSpectrumEQ
+                          key={`eq-${playerKey}`}
+                          audioRef={audioRef}
+                          color="#6366f1"
+                          barCount={40}
+                        />
+                      ) : (
+                        // THE VISUAL STAND-IN: Zero CPU usage, zero API risk
+                        <FlatlineEQ 
+                          color="#6366f1" 
+                          barCount={10}
+                        />
+                      )}
                     </div>
                   )}
 
                   {/* 5. FOREGROUND WRAPPER: Added `relative z-10` so the text floats above the EQ */}
                   <div className="relative z-10 flex items-center justify-between w-full">
                     <span className={`text-sm sm:text-base font-medium truncate flex-grow min-w-0 pr-4 transition-colors ${
-                      isPlaying 
+                      currentSong 
                         ? 'text-indigo-600 dark:text-indigo-300' 
                         : 'text-slate-700 dark:text-slate-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'
                     }`}>
