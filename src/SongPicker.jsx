@@ -49,13 +49,13 @@ export default function SongPicker() {
   // Safe split for breadcrumbs
   const breadcrumbs = (data.currentPath || "").split('/').filter(Boolean);
   
-  // Safe, broad, multi-word filter for files
-  const filteredFiles = (data.files || []).filter(file => {
+ // Safe, broad, multi-word filter for files
+   const filteredFiles = (data.files || []).filter(file => {
     if (!searchQuery.trim()) return true;
-    
+
     // 1. Split the search query into individual words (ignoring extra spaces)
     const searchTerms = searchQuery.toLowerCase().split(' ').filter(Boolean);
-    
+
     // 2. Mash all the track's searchable data into one giant string
     const searchableText = [
       file.title,
@@ -68,6 +68,62 @@ export default function SongPicker() {
     // 3. Return true ONLY if every single search word is found somewhere in that giant string
     return searchTerms.every(term => searchableText.includes(term));
   });
+
+  // =========================================
+  // NEW: DYNAMIC DIRECTORY BUILDER
+  // =========================================
+  let displayDirs = [];
+
+  if (!searchQuery.trim()) {
+    // Not searching: just show the standard directories
+    displayDirs = data.dirs || [];
+  } else {
+    const uniquePaths = new Set();
+    const derivedDirs = [];
+
+    // Grab the same search terms we used for the files
+    const searchTerms = searchQuery.toLowerCase().split(' ').filter(Boolean);
+
+    // 1. Check native subdirectories
+    (data.dirs || []).forEach(dir => {
+      // Only include if the directory path itself matches ALL search terms
+      const dirMatches = searchTerms.every(term => dir.path.toLowerCase().includes(term));
+      if (dirMatches) {
+        uniquePaths.add(dir.path);
+        derivedDirs.push(dir);
+      }
+    });
+
+    // 2. Extract paths out of the currently filtered MP3s
+    filteredFiles.forEach(file => {
+      const lastSlashIndex = file.url.lastIndexOf('/');
+
+      if (lastSlashIndex !== -1) {
+        // Chop off the filename to get just the directory path
+        const dirPath = file.url.substring(0, lastSlashIndex);
+
+        // 🚨 THE FIX: Verify the stripped directory actually matches the search
+        const dirMatches = searchTerms.every(term => dirPath.toLowerCase().includes(term));
+
+        if (dirMatches && !uniquePaths.has(dirPath)) {
+          uniquePaths.add(dirPath);
+          const name = dirPath.split('/').pop() || dirPath;
+          derivedDirs.push({ path: dirPath, name });
+        }
+      } else if (file.folder) {
+         // Fallback for flat URLs with a folder prop
+         const dirMatches = searchTerms.every(term => file.folder.toLowerCase().includes(term));
+         if (dirMatches && !uniquePaths.has(file.folder)) {
+           uniquePaths.add(file.folder);
+           const name = file.folder.split('/').pop() || file.folder;
+           derivedDirs.push({ path: file.folder, name });
+         }
+      }
+    });
+
+    // 3. Sort them alphabetically
+    displayDirs = derivedDirs.sort((a, b) => a.name.localeCompare(b.name));
+  }
 
   const handleQueueAll = async () => {
     // Prevent clicking if there are no files AND no folders
@@ -239,7 +295,7 @@ export default function SongPicker() {
         <div className="flex flex-col w-full pb-4">
           
           {/* Directories */}
-          {data.dirs && data.dirs.map(dir => (
+          {displayDirs.map(dir => (
             <div key={dir.path} className="flex items-center justify-between p-3 sm:p-4 border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group w-full cursor-pointer" onClick={() => fetchPath(dir.path)}>
               <div className="flex items-center gap-3 text-slate-700 dark:text-slate-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors min-w-0 pr-4">
                 <svg className="w-5 h-5 text-indigo-500/70 shrink-0" fill="currentColor" viewBox="0 0 24 24">
@@ -293,7 +349,7 @@ export default function SongPicker() {
           ))}
 
           {/* Empty State */}
-          {(!data.dirs?.length && !filteredFiles.length) && (
+          {(!displayDirs.length && !filteredFiles.length) && (
             <div className="p-12 text-center text-slate-500 dark:text-slate-400 italic text-sm transition-colors duration-300">
               No music found here.
             </div>
