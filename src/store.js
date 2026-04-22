@@ -60,6 +60,16 @@ export const useStore = create(
       currentIndex: 0,
       isPlaying: false,
 
+      playerKey: Date.now(),
+      triggerPlayerReset: () => {
+        const newKey = Date.now();
+        set({newKey});
+        console.log("new playerKey="+ newKey);
+      },
+
+      savedTime: 0,
+      setSavedTime: (time) => set({ savedTime: time }),
+
       // Add a single song and auto-play if it's the first one
       addSong: (song) => set((state) => {
         const isPlaylistEmpty = state.playlist.length === 0;
@@ -159,7 +169,7 @@ export const useStore = create(
       }),
       
       // Jump to a specific song
-      playSpecificSong: (index) => set({ currentIndex: index, isPlaying: true })
+      playSpecificSong: (index) => set({ currentIndex: index, isPlaying: true }),
     }),
     {
       name: 'audio-player-storage', // Name of the key in localStorage
