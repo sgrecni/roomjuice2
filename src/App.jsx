@@ -7,6 +7,8 @@ import Settings from './Settings';
 
 export default function App() {
   const { config, updateConfig } = useStore();
+  const playerKey = useStore(state => state.playerKey);
+
   const audioRef = useRef(null);
   // const isAuth = useStore(state => state.isAuth);
   // const setAuth = useStore(state => state.setAuth);
@@ -124,7 +126,7 @@ export default function App() {
           
           {/* LEFT COLUMN */}
           <div className="w-full lg:w-[var(--left-col-width)] shrink-0 flex flex-col gap-6">
-            <Player audioRef={audioRef} />
+            <Player key={`player-${playerKey}`} audioRef={audioRef} />
             <Playlist audioRef={audioRef} />
           </div>
 

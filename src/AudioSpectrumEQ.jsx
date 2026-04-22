@@ -1,125 +1,81 @@
 import React, { useEffect, useRef } from 'react';
 
-// TRUE SINGLETONS
-let globalAudioContext = null;
-let globalAnalyserNode = null;
-
-export default function AudioSpectrumEQ({ audioRef, color = '#6366f1', barCount = 32 }) {
-  const containerRef = useRef(null);
+export default function AudioSpectrumEQ({ audioRef, color = "#6366f1", barCount = 40 }) {
+  const canvasRef = useRef(null);
   const animationRef = useRef(null);
-  const isDrawing = useRef(true); 
 
   useEffect(() => {
-    const audioElement = audioRef?.current;
-    if (!audioElement) return;
-
-    const initAudioEngine = () => {
-      try {
-        if (!globalAudioContext) {
-          const AudioContext = window.AudioContext || window.webkitAudioContext;
-          globalAudioContext = new AudioContext(); 
-          
-          globalAnalyserNode = globalAudioContext.createAnalyser();
-          globalAnalyserNode.fftSize = 64;
-          globalAnalyserNode.smoothingTimeConstant = 0.85;
-          globalAnalyserNode.minDecibels = -90;
-          globalAnalyserNode.maxDecibels = -10;
-          
-          globalAnalyserNode.connect(globalAudioContext.destination);
-        }
-
-        // Attach the pipes synchronously
-        if (!audioElement._sourceNode) {
-          audioElement._sourceNode = globalAudioContext.createMediaElementSource(audioElement);
-        }
-        audioElement._sourceNode.connect(globalAnalyserNode);
-
-        // Wake it up
-        if (globalAudioContext.state === 'suspended') {
-          globalAudioContext.resume().catch(e => console.warn("Resume blocked:", e));
-        }
-
-        isDrawing.current = true;
-        startAnimation();
-      } catch (error) {
-        console.error("Audio engine wiring error", error);
-      }
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        isDrawing.current = false;
-        if (animationRef.current) cancelAnimationFrame(animationRef.current);
-      } else {
-        isDrawing.current = true;
-        if (audioElement && !audioElement.paused) {
-          startAnimation();
-        }
-      }
-    };
-
-    // =========================================
-    // LISTEN FOR THE CUSTOM EVENT
-    // =========================================
-    audioElement.addEventListener('wire-eq-now', initAudioEngine);
+    const canvas = canvasRef.current;
+    if (!canvas || !audioRef.current) return;
     
-    // Keep the native play fallback just in case the OS triggers playback natively
-    audioElement.addEventListener('play', initAudioEngine); 
+    const ctx = canvas.getContext('2d');
+    const analyser = audioRef.current.rjAnalyser;
 
-    if (!audioElement.paused) initAudioEngine(); 
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      isDrawing.current = false;
-      cancelAnimationFrame(animationRef.current);
-      
-      if (audioElement) {
-        audioElement.removeEventListener('wire-eq-now', initAudioEngine);
-        audioElement.removeEventListener('play', initAudioEngine);
-        if (audioElement._sourceNode) {
-          audioElement._sourceNode.disconnect();
-        }
+    if (!analyser) {
+      ctx.fillStyle = color;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const barWidth = canvas.width / barCount;
+      for (let i = 0; i < barCount; i++) {
+        ctx.fillRect(i * barWidth, canvas.height / 2, barWidth - 2, 2);
       }
-      
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [audioRef]);
+      return;
+    }
 
-  const startAnimation = () => {
-    if (animationRef.current) cancelAnimationFrame(animationRef.current);
-    const dataArray = new Uint8Array(globalAnalyserNode.frequencyBinCount);
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
 
-    const animate = () => {
-      if (!isDrawing.current || !containerRef.current || !globalAnalyserNode) return;
+    // 🚨 OPTION 2: The Canvas Gravity Memory Array
+    // This remembers where every bar was sitting on the exact previous frame
+    let previousHeights = new Array(barCount).fill(0);
 
-      globalAnalyserNode.getByteFrequencyData(dataArray);
-      const bars = containerRef.current.children;
+    const draw = () => {
+      animationRef.current = requestAnimationFrame(draw);
+      analyser.getByteFrequencyData(dataArray);
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = color;
+
+      const barWidth = canvas.width / barCount;
 
       for (let i = 0; i < barCount; i++) {
-        const dataIndex = Math.floor(i * (dataArray.length / barCount)) + 1; 
-        const safeIndex = Math.min(dataIndex, dataArray.length - 1);
-        const value = dataArray[safeIndex]; 
-        const heightPercent = Math.max(10, (value / 255) * 85); 
+        const dataIndex = Math.floor((i / barCount) * (bufferLength * 0.75)); 
+        const barValue = dataArray[dataIndex]; 
+        const percent = barValue / 255;
         
-        if (bars[i]) {
-          bars[i].style.height = `${heightPercent}%`;
+        // This is where the hardware says the bar SHOULD be
+        const targetHeight = Math.max(2, percent * canvas.height);
+
+        // 🚨 THE GRAVITY MATH
+        if (targetHeight < previousHeights[i]) {
+          // If the music suddenly gets quiet, don't snap the bar down!
+          // Only let it fall by exactly 3 pixels per frame. 
+          // (Tweak this number: 1 is very slow, 5 is fast)
+          previousHeights[i] = Math.max(2, previousHeights[i] - 2);
+        } else {
+          // If the music gets loud, let it snap up instantly!
+          previousHeights[i] = targetHeight;
         }
+
+        const x = i * barWidth;
+        const y = canvas.height - previousHeights[i]; // Use the gravity height
+
+        ctx.fillRect(x, y, barWidth - 2, previousHeights[i]);
       }
-      animationRef.current = requestAnimationFrame(animate);
     };
-    animate();
-  };
+
+    draw(); 
+
+    return () => {
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    };
+  }, [audioRef, color, barCount]);
 
   return (
-    <div ref={containerRef} className="w-full h-full flex items-end justify-between gap-[2px]">
-      {Array.from({ length: barCount }).map((_, i) => (
-        <div
-          key={i}
-          className="flex-1 rounded-t-sm transition-all duration-[50ms] ease-linear origin-bottom"
-          style={{ backgroundColor: color, height: '10%' }}
-        />
-      ))}
-    </div>
+    <canvas 
+      ref={canvasRef} 
+      width="800" 
+      height="200" 
+      className="w-full h-full drop-shadow-md" 
+    />
   );
 }

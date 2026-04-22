@@ -5,18 +5,18 @@ import { API_BASE_URL } from './config';
 /* enabling the EQ on Apple mobile causes background music to be denied, so disable by default */
 export const isAppleMobile = () => {
   if (typeof window === 'undefined') return false; // Safety check
-  
+
   const ua = window.navigator.userAgent;
   const isIOS = /iPad|iPhone|iPod/.test(ua);
-  
+
   // Catch modern iPads that claim to be a Mac but have a touch screen
-  const isMacWithTouch = ua.includes('Macintosh') && navigator.maxTouchPoints > 1; 
-  
+  const isMacWithTouch = ua.includes('Macintosh') && navigator.maxTouchPoints > 1;
+
   return isIOS || isMacWithTouch;
 };
-const defaultConfig = { 
-  leftWidth: 400, 
-  volume: 0.8, 
+const defaultConfig = {
+  leftWidth: 400,
+  volume: 0.8,
   theme: 'dark',
   lastPath: '',
   hidePlayed: false,
@@ -63,18 +63,18 @@ export const useStore = create(
       playerKey: Date.now(),
       triggerPlayerReset: () => {
         const newKey = Date.now();
-        set({newKey});
-        console.log("new playerKey="+ newKey);
+        set({ newKey });
+        console.log("new playerKey=" + newKey);
       },
 
-      savedTime: 0,
+      savedTime: 0, /* for crash recovery */
       setSavedTime: (time) => set({ savedTime: time }),
 
       // Add a single song and auto-play if it's the first one
       addSong: (song) => set((state) => {
         const isPlaylistEmpty = state.playlist.length === 0;
-        
-        return { 
+
+        return {
           playlist: [...state.playlist, song],
           // If the playlist was empty, immediately start playing
           isPlaying: isPlaylistEmpty ? true : state.isPlaying,
@@ -91,10 +91,10 @@ export const useStore = create(
           ...song,
           id: crypto.randomUUID()
         }));
-        
+
         const isPlaylistEmpty = state.playlist.length === 0;
-        
-        return { 
+
+        return {
           playlist: [...state.playlist, ...songsWithIds],
           // If empty, start playing the first song in the newly added batch
           isPlaying: isPlaylistEmpty ? true : state.isPlaying,
@@ -102,12 +102,16 @@ export const useStore = create(
         };
       }),
 
-      // NEW: Wipe the playlist completely
-      clearPlaylist: () => set({ 
-        playlist: [], 
-        currentIndex: 0, 
-        isPlaying: false 
-      }),
+      clearPlaylist: () => {
+        localStorage.removeItem('rj_saved_time'); /* save time when hitting F5 */
+
+        set({
+          playlist: [],
+          currentIndex: 0,
+          isPlaying: false,
+          savedTime: 0
+        });
+      },
 
       // Remove a song and intelligently handle the current index
       removeSong: (id) => set((state) => {
@@ -121,7 +125,7 @@ export const useStore = create(
         // If we remove a song before the current one, shift the index back
         if (indexToRemove < state.currentIndex) {
           newIndex = state.currentIndex - 1;
-        } 
+        }
         // If we remove the currently playing song
         else if (indexToRemove === state.currentIndex) {
           if (newPlaylist.length === 0) {
@@ -129,14 +133,14 @@ export const useStore = create(
             newIsPlaying = false;
           } else if (newIndex >= newPlaylist.length) {
             newIndex = 0; // Wrap back to start if it was the last song
-            newIsPlaying = false; 
+            newIsPlaying = false;
           }
         }
 
-        return { 
-          playlist: newPlaylist, 
-          currentIndex: newIndex, 
-          isPlaying: newIsPlaying 
+        return {
+          playlist: newPlaylist,
+          currentIndex: newIndex,
+          isPlaying: newIsPlaying
         };
       }),
 
@@ -146,28 +150,28 @@ export const useStore = create(
       pause: () => set({ isPlaying: false }),
       previous: () => set((state) => {
         if (state.playlist.length === 0) return state; // Do nothing if playlist is empty
-        
+
         // If we are on the first song, wrap around to the last song. Otherwise, go back one.
-        const prevIndex = state.currentIndex === 0 
-          ? state.playlist.length - 1 
+        const prevIndex = state.currentIndex === 0
+          ? state.playlist.length - 1
           : state.currentIndex - 1;
-          
-        return { 
-          currentIndex: prevIndex, 
+
+        return {
+          currentIndex: prevIndex,
           isPlaying: true // Auto-play the previous song
         };
       }),
       next: () => set((state) => {
         if (state.playlist.length === 0) return state;
         const nextIndex = state.currentIndex + 1;
-        
+
         // Loop back to the first song if we hit the end
         if (nextIndex < state.playlist.length) {
           return { currentIndex: nextIndex, isPlaying: true };
         }
-        return { currentIndex: 0, isPlaying: false }; 
+        return { currentIndex: 0, isPlaying: false };
       }),
-      
+
       // Jump to a specific song
       playSpecificSong: (index) => set({ currentIndex: index, isPlaying: true }),
     }),
