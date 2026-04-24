@@ -2,19 +2,7 @@ import React from 'react';
 import { useStore } from './store';
 import AudioSpectrumEQ from './AudioSpectrumEQ'; // 1. Import the visualizer
 
-const FlatlineEQ = ({ color = '#6366f1', barCount = 32 }) => (
-  <div className="w-full h-full flex items-end justify-between gap-[2px]">
-    {Array.from({ length: barCount }).map((_, i) => (
-      <div
-        key={`flat-${i}`}
-        className="flex-1 rounded-t-sm transition-all duration-[50ms] ease-linear origin-bottom"
-        style={{ backgroundColor: color, height: '10%' }} // Fixed at 10%
-      />
-    ))}
-  </div>
-);
-
-// 2. Accept audioRef as a prop from the parent that holds the Player
+// Accept audioRef as a prop from the parent that holds the Player
 export default function Playlist({ audioRef }) {
   const { playlist, currentIndex, removeSong, playSpecificSong, clearPlaylist,
           config, updateConfig, isPlaying, playerKey } = useStore();
@@ -89,21 +77,12 @@ export default function Playlist({ audioRef }) {
                   {/* 4. THE EQ BACKGROUND: Renders only if this song is actually playing */}
                   {config.isEqEnabled && currentSong && (
                     <div className="absolute inset-0 z-0 pointer-events-none opacity-15 dark:opacity-20">
-                      {true || isPlaying ? (
-                        // THE REAL DEAL: Mounts and wires up the Web Audio API safely
                         <AudioSpectrumEQ
                           key={`eq-${playerKey}`}
                           audioRef={audioRef}
                           color="#6366f1"
                           barCount={40}
                         />
-                      ) : (
-                        // THE VISUAL STAND-IN: Zero CPU usage, zero API risk
-                        <FlatlineEQ 
-                          color="#6366f1" 
-                          barCount={10}
-                        />
-                      )}
                     </div>
                   )}
 
