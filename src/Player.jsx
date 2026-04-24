@@ -32,6 +32,7 @@ export default function Player({ audioRef }) {
     const nextIndex = currentIndex + 1;
     if (nextIndex >= playlist.length) {
       pause(); // End of the line, let the phone sleep!
+      useStore.setState({ currentIndex: 0 }); // go back to the first song in the list
       return;
     }
 
