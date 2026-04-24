@@ -1,6 +1,9 @@
 import React, { useEffect, useRef } from 'react';
+import { useStore } from './store';
 
 export default function AudioSpectrumEQ({ audioRef, color = "#6366f1", barCount = 40 }) {
+  const isPlaying = useStore(state => state.isPlaying);
+
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
 
@@ -29,6 +32,11 @@ export default function AudioSpectrumEQ({ audioRef, color = "#6366f1", barCount 
     let previousHeights = new Array(barCount).fill(0);
 
     const draw = () => {
+      // don't draw if paused AND all bars have fallen to the floor
+      if (!isPlaying && previousHeights.every(h => h <= 2)) {
+        return;
+      }
+
       animationRef.current = requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
 
