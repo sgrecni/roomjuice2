@@ -1,9 +1,9 @@
 import React, { useEffect, useRef } from 'react';
-import { useStore } from './store';
+import { useStore } from './store'; // 🚨 Your store import!
 
-export default function AudioSpectrumEQ({ audioRef, color = "#6366f1", barCount = 40 }) {
-  const isPlaying = useStore(state => state.isPlaying);
-
+export default function AudioSpectrumEQ({ audioRef, color = "#6366f1", barCount = 40, useGradient = false }) {
+  const isPlaying = useStore(state => state.isPlaying); // 🚨 Your state hook!
+  
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
 
@@ -26,22 +26,37 @@ export default function AudioSpectrumEQ({ audioRef, color = "#6366f1", barCount 
 
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
+    let previousHeights = new Array(barCount).fill(0); 
 
-    // 🚨 OPTION 2: The Canvas Gravity Memory Array
-    // This remembers where every bar was sitting on the exact previous frame
-    let previousHeights = new Array(barCount).fill(0);
-
+    // =========================================
+    // THE DRAW LOOP
+    // =========================================
     const draw = () => {
-      // don't draw if paused AND all bars have fallen to the floor
+      
+      // 🚨 YOUR CPU MICRO-OPTIMIZATION
+      // If paused AND all bars have fallen to the floor, stop asking for animation frames!
       if (!isPlaying && previousHeights.every(h => h <= 2)) {
-        return;
+        return; 
       }
 
       animationRef.current = requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = color;
+
+      // The Heat Map Gradient Logic
+      if (useGradient) {
+        const gradient = ctx.createLinearGradient(0, canvas.height, 0, 0);
+        gradient.addColorStop(0.0, color);       
+        gradient.addColorStop(0.25, "#facc15");   // 1. Swapped to a brighter, purer Yellow
+        gradient.addColorStop(0.42, "#f59e0b");   // 2. Added an Amber bridge to smooth the math!
+        gradient.addColorStop(0.60, "#ea580c");   // 3. Swapped to a slightly deeper Orange
+        
+        gradient.addColorStop(0.9, "#ef4444");    // Red at the peak
+        ctx.fillStyle = gradient; 
+      } else {
+        ctx.fillStyle = color;    
+      }
 
       const barWidth = canvas.width / barCount;
 
@@ -50,22 +65,17 @@ export default function AudioSpectrumEQ({ audioRef, color = "#6366f1", barCount 
         const barValue = dataArray[dataIndex]; 
         const percent = barValue / 255;
         
-        // This is where the hardware says the bar SHOULD be
         const targetHeight = Math.max(2, percent * canvas.height);
 
-        // 🚨 THE GRAVITY MATH
+        // The Gravity Math
         if (targetHeight < previousHeights[i]) {
-          // If the music suddenly gets quiet, don't snap the bar down!
-          // Only let it fall by exactly 3 pixels per frame. 
-          // (Tweak this number: 1 is very slow, 5 is fast)
-          previousHeights[i] = Math.max(2, previousHeights[i] - 2);
+          previousHeights[i] = Math.max(2, previousHeights[i] - 3);
         } else {
-          // If the music gets loud, let it snap up instantly!
           previousHeights[i] = targetHeight;
         }
 
         const x = i * barWidth;
-        const y = canvas.height - previousHeights[i]; // Use the gravity height
+        const y = canvas.height - previousHeights[i]; 
 
         ctx.fillRect(x, y, barWidth - 2, previousHeights[i]);
       }
@@ -76,7 +86,7 @@ export default function AudioSpectrumEQ({ audioRef, color = "#6366f1", barCount 
     return () => {
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [audioRef, color, barCount]);
+  }, [audioRef, color, barCount, useGradient, isPlaying]); // 🚨 Added isPlaying to dependencies!
 
   return (
     <canvas 
