@@ -48,9 +48,9 @@ export default function AudioSpectrumEQ({ audioRef, color = "#6366f1", barCount 
       if (useGradient) {
         const gradient = ctx.createLinearGradient(0, canvas.height, 0, 0);
         gradient.addColorStop(0.0, color);       
-        gradient.addColorStop(0.25, "#facc15");   // 1. Swapped to a brighter, purer Yellow
-        gradient.addColorStop(0.42, "#f59e0b");   // 2. Added an Amber bridge to smooth the math!
-        gradient.addColorStop(0.60, "#ea580c");   // 3. Swapped to a slightly deeper Orange
+        gradient.addColorStop(0.35, "#facc15");   // 1. Swapped to a brighter, purer Yellow
+        gradient.addColorStop(0.52, "#f59e0b");   // 2. Added an Amber bridge to smooth the math!
+        gradient.addColorStop(0.70, "#ea580c");   // 3. Swapped to a slightly deeper Orange
         
         gradient.addColorStop(0.9, "#ef4444");    // Red at the peak
         ctx.fillStyle = gradient; 
